@@ -1,0 +1,6 @@
+###### Requirements  ######
+
+bcrypt
+Flask
+Flask-SQLAlchemy
+PyJWT
