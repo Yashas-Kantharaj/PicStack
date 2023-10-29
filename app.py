@@ -66,7 +66,7 @@ def signup():
         .first()
 
     if not user:
-        # database ORM object
+
         user = User(
             public_id = str(uuid.uuid4()),
             name = name,
@@ -134,9 +134,9 @@ def token_required(f):
   
     return decorated
     
-@token_required
 @app.route('/upload', methods =['POST'])
-def upload_pics():
+@token_required
+def upload_pics(current_user):
     upload_pic = request.files['']
     data = request.form
 
@@ -159,11 +159,7 @@ def upload_pics():
             return jsonify({'message' : 'Invalid file type'}), 401
         
         upload_pic.save(os.path.join(app.config['UPLOAD_PATH'], filename))
-        token = request.cookies.get('x-auth-token')
-        data = jwt.decode(token, app.config['SECRET_KEY'], algorithms='HS256')
-        current_user = User.query\
-            .filter_by(public_id = data['public_id'])\
-            .first()
+
         picture = Picture(
             user_id = current_user.public_id,
             pic_name = filename,
@@ -175,15 +171,106 @@ def upload_pics():
         db.session.add(picture)
         db.session.commit()
     
-        #return 200 if file is Uploaded Succesfully
+        # return 200 if file is Uploaded Succesfully
         return jsonify({'message' : 'Uploaded Succesfully'}), 200
 
+@app.route('/logout', methods =['GET'])
+@token_required
+def logout(current_user):
+    response = make_response(jsonify({'message' : 'User logged out'}), 200)
+    response.delete_cookie('x-auth-token')
+    return response
 
+@app.route('/guest', methods =['GET'])
+def get_public():
+    public = Picture.query\
+        .filter(Picture.is_public == True)\
+        .all()
+
+    if not public:
+        # return 200 if no public images
+        return jsonify({'message' : 'No Images'}), 200
+    else:
+        data = []
+        for pic in public:
+            data.append({
+                'pic_name' : pic.pic_name,
+                'disc' : pic.pic_disc
+            })
+        # return 200 with all public images
+        return jsonify({'pictures' : data}), 200
+    
+@app.route('/delete', methods = ['POST'])
+@token_required
+def delete_picture(current_user):
+    data = request.form
+
+    picture_id = data.get('pic_id')
+
+    if not picture_id:
+        return jsonify({'message' : 'Please enter a picture ID'}), 400
+    
+    pic = Picture.query\
+        .filter(Picture.id == picture_id)\
+        .first()
+    
+    if not pic:
+        return jsonify({'message' : 'No Image to delete'}), 200
+    
+    # Delete selected picture
+    db.session.delete(pic)
+    db.session.commit()
+
+    return jsonify({'message' : 'Image deleted'}), 200
+
+@app.route('/update', methods = ['POST'])
+@token_required
+def update_picture(current_user):
+    data = request.form
+
+    picture_id = data.get('pic_id')
+    update_disc = data.get('new_disc')
+
+    if not picture_id or not update_disc:
+        return jsonify({'message' : 'Please enter valid ID and description'}), 400
+    
+    pic = Picture.query\
+        .filter(Picture.id == picture_id)\
+        .first()
+    
+    if not pic:
+        return jsonify({'message' : 'No Image to update'}), 200
+
+    pic.pic_disc = update_disc
+    db.session.commit()
+
+    return jsonify({'message' : 'Image description updated'}), 200
+    
 @app.route('/home', methods =['GET'])
 @token_required
-def get_all_users(current_user):
+def home(current_user):
+    public = Picture.query\
+        .filter(Picture.is_public == True)\
+        .all()
+    
+    private = Picture.query\
+        .filter(Picture.user_id == current_user.public_id)\
+        .filter(Picture.is_public == False)\
+        .all()
 
-    return jsonify({"Text" : 'Hello, Welcome'})
+    all_pic = public + private 
+    if not all_pic:
+        # return 200 if no public images
+        return jsonify({'message' : 'No Images'}), 200
+    else:
+        data = []
+        for pic in all_pic:
+            data.append({
+                'pic_name' : pic.pic_name,
+                'disc' : pic.pic_disc
+            })
+        # return 200 with all public images
+        return jsonify({'pictures' : data}), 200
 
 if __name__ == '__main__':
     app.debug = True
