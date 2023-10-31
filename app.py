@@ -119,7 +119,7 @@ def token_required(f):
         # return 401 if token is not passed
         token = request.cookies.get('x-auth-token')
         if not token:
-            return jsonify({'message' : 'Missing Token'}), 401
+            return jsonify({'message' : 'Missing Token required authentication'}), 401
   
         try:
             # decoding the payload to fetch the stored details
@@ -128,7 +128,7 @@ def token_required(f):
                 .filter_by(public_id = data['public_id'])\
                 .first()
         except:
-            return jsonify({'message' : 'Invalid Token'}), 401
+            return jsonify({'message' : 'Invalid Token, try logging in again'}), 401
         # returns the current logged in users context to the routes
         return  f(current_user, *args, **kwargs)
   
@@ -271,6 +271,18 @@ def home(current_user):
             })
         # return 200 with all public images
         return jsonify({'pictures' : data}), 200
+
+@app.errorhandler(404)
+def page_not_found(error):
+    return jsonify({'message' : 'Page not available'}), 404
+
+@app.errorhandler(405)
+def method_not_allowed(error):
+    return jsonify({'message' : 'Method not allowed'}), 405
+
+@app.errorhandler(500)
+def server_error(error):
+    return jsonify({'message' : 'Internal server error'}), 500
 
 if __name__ == '__main__':
     app.debug = True
