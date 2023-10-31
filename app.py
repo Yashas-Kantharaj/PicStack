@@ -50,6 +50,30 @@ def password_check(savedPassword, password):
     result = bcrypt.checkpw(userBytes, savedPassword)
     return result
 
+# decorator for verifying the JWT
+def token_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        token = None
+        # jwt token is picked from cookiesx
+        # return 401 if token is not passed
+        token = request.cookies.get('x-auth-token')
+        if not token:
+            return jsonify({'message' : 'Missing Token required authentication'}), 401
+  
+        try:
+            # decoding the payload to fetch the stored details
+            data = jwt.decode(token, app.config['SECRET_KEY'], algorithms='HS256')
+            current_user = User.query\
+                .filter_by(public_id = data['public_id'])\
+                .first()
+        except:
+            return jsonify({'message' : 'Invalid Token, try logging in again'}), 401
+        # returns the current logged in users context to the routes
+        return  f(current_user, *args, **kwargs)
+  
+    return decorated
+
 #API for User SignUp
 @app.route('/signup', methods =['POST'])
 def signup():
@@ -110,29 +134,12 @@ def login():
         'Account information entered is invalid',
         403)
 
-# decorator for verifying the JWT
-def token_required(f):
-    @wraps(f)
-    def decorated(*args, **kwargs):
-        token = None
-        # jwt token is picked from cookiesx
-        # return 401 if token is not passed
-        token = request.cookies.get('x-auth-token')
-        if not token:
-            return jsonify({'message' : 'Missing Token required authentication'}), 401
-  
-        try:
-            # decoding the payload to fetch the stored details
-            data = jwt.decode(token, app.config['SECRET_KEY'], algorithms='HS256')
-            current_user = User.query\
-                .filter_by(public_id = data['public_id'])\
-                .first()
-        except:
-            return jsonify({'message' : 'Invalid Token, try logging in again'}), 401
-        # returns the current logged in users context to the routes
-        return  f(current_user, *args, **kwargs)
-  
-    return decorated
+@app.route('/logout', methods =['GET'])
+@token_required
+def logout(current_user):
+    response = make_response(jsonify({'message' : 'User logged out'}), 200)
+    response.delete_cookie('x-auth-token')
+    return response
     
 @app.route('/upload', methods =['POST'])
 @token_required
@@ -174,32 +181,6 @@ def upload_pics(current_user):
         # return 200 if file is Uploaded Succesfully
         return jsonify({'message' : 'Uploaded Succesfully'}), 200
 
-@app.route('/logout', methods =['GET'])
-@token_required
-def logout(current_user):
-    response = make_response(jsonify({'message' : 'User logged out'}), 200)
-    response.delete_cookie('x-auth-token')
-    return response
-
-@app.route('/guest', methods =['GET'])
-def get_public():
-    public = Picture.query\
-        .filter(Picture.is_public == True)\
-        .all()
-
-    if not public:
-        # return 200 if no public images
-        return jsonify({'message' : 'No Images'}), 200
-    else:
-        data = []
-        for pic in public:
-            data.append({
-                'pic_name' : pic.pic_name,
-                'disc' : pic.pic_disc
-            })
-        # return 200 with all public images
-        return jsonify({'pictures' : data}), 200
-    
 @app.route('/delete', methods = ['POST'])
 @token_required
 def delete_picture(current_user):
@@ -245,7 +226,7 @@ def update_picture(current_user):
     db.session.commit()
 
     return jsonify({'message' : 'Image description updated'}), 200
-    
+
 @app.route('/home', methods =['GET'])
 @token_required
 def home(current_user):
@@ -271,6 +252,26 @@ def home(current_user):
             })
         # return 200 with all public images
         return jsonify({'pictures' : data}), 200
+
+@app.route('/guest', methods =['GET'])
+def get_public():
+    public = Picture.query\
+        .filter(Picture.is_public == True)\
+        .all()
+
+    if not public:
+        # return 200 if no public images
+        return jsonify({'message' : 'No Images'}), 200
+    else:
+        data = []
+        for pic in public:
+            data.append({
+                'pic_name' : pic.pic_name,
+                'disc' : pic.pic_disc
+            })
+        # return 200 with all public images
+        return jsonify({'pictures' : data}), 200
+    
 
 @app.errorhandler(404)
 def page_not_found(error):
