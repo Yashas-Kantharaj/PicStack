@@ -285,5 +285,4 @@ def server_error(error):
     return jsonify({'message' : 'Internal server error'}), 500
 
 if __name__ == '__main__':
-    app.debug = True
     app.run()
