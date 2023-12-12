@@ -26,7 +26,7 @@ Building a RESTful app where users can upload pictures using Flask
     Flask-SQLAlchemy
     PyJWT
 
-    install SQLLite for database
+    install SQLLite for the database
 
 ## Project Details:
 
@@ -36,19 +36,19 @@ Flask routes:
     Registers a new user with the given username, email and password in the form payload.
     
     POST /login:
-    Logs in a user with the given email and password in the form payload. The response includes a JWT token that needs to be used for accessing the protected routes. JWT token is saved into cookies.
+    Log in a user with the given email and password in the form payload. The response includes a JWT token that needs to be used for accessing the protected routes. JWT token is saved into cookies.
     
     GET /logout:
     logs out the user and removes the JWT token saved in the cookies.
 
     POST /upload
-    Uploads a file to Uploaded_Pictures directory. This endpoint is protected and needs a JWT token in the cookies.
+    Upload a file to the Uploaded_Pictures directory. This endpoint is protected and needs a JWT token in the cookies.
     
     POST /delete:
-    Deletes a image with a given ID in the form payload. This endpoint is protected and needs a JWT token in the cookies.
+    Deletes an image with a given ID in the form payload. This endpoint is protected and needs a JWT token in the cookies.
 
     POST /update:
-    Updates the image discription for provied image ID with updated discription in the form payload. This endpoint is protected and needs a JWT token in the cookies.
+    Updates the image description for the provided image ID with the updated description in the form payload. This endpoint is protected and needs a JWT token in the cookies.
     
     GET /home:
     Returns all the public images of all users and private images of the authenticated user from the Picture table. This endpoint is protected and needs a JWT token in the cookies.
@@ -63,6 +63,6 @@ Database models:
 
 Function:
 
-    Decorator token_requrired that takes a JWT token from the saved cookies and returns the corresponding user if the token is valid and has not expired. 
-    password_hash encodes and hashes the password provied by the user.
-    password_check checks the hashed password from the database with the password provied by the user while login.
+    Decorator token_requrired takes a JWT token from the saved cookies and returns the corresponding user if the token is valid and has not expired. 
+    password_hash encodes and hashes the password provided by the user.
+    password_check checks the hashed password from the database with the password provided by the user while login.
